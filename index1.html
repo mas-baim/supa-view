@@ -1,0 +1,1153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Mas Baim Gallery</title>
+  <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&family=Roboto:wght@300;400;500&display=swap" rel="stylesheet"/>
+  
+  <!-- Supabase JS Client -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --blue: #1a73e8;
+      --blue-dark: #1557b0;
+      --sidebar-bg: #f8f9fa;
+      --border: #e0e0e0;
+      --text-primary: #202124;
+      --text-secondary: #5f6368;
+      --hover-bg: #e8f0fe;
+      --active-bg: #d2e3fc;
+      --white: #ffffff;
+      --shadow: 0 2px 10px rgba(0,0,0,0.12);
+      --radius: 12px;
+    }
+
+    body {
+      font-family: 'Roboto', sans-serif;
+      background: #e8eaf0;
+      min-height: 100vh;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .app-window {
+      width: 100%;
+      max-width: 960px;
+      background: var(--white);
+      border-radius: 18px;
+      box-shadow: 0 8px 40px rgba(0,0,0,0.16);
+      overflow: hidden;
+    }
+
+    /* ── HEADER ── */
+    .header {
+      background: var(--blue);
+      padding: 14px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .traffic-lights {
+      display: flex;
+      gap: 6px;
+    }
+    .traffic-lights span {
+      width: 13px; height: 13px;
+      border-radius: 50%;
+      display: block;
+    }
+    .tl-red   { background: #ff5f57; }
+    .tl-yellow{ background: #febc2e; }
+    .tl-green { background: #28c840; }
+
+    .header-title {
+      font-family: 'Google Sans', sans-serif;
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--white);
+      letter-spacing: 0.3px;
+    }
+
+    .btn-admin {
+      background: rgba(255,255,255,0.2);
+      color: var(--white);
+      font-family: 'Google Sans', sans-serif;
+      font-size: 13px;
+      font-weight: 500;
+      padding: 6px 14px;
+      border: 1px solid rgba(255,255,255,0.3);
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.2s;
+      text-decoration: none;
+    }
+    .btn-admin:hover { background: rgba(255,255,255,0.3); }
+
+    /* ── HAMBURGER BUTTON ── */
+    .hamburger-btn {
+      display: none;
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 6px;
+      margin-left: 10px;
+    }
+    .hamburger-btn span {
+      display: block;
+      width: 22px;
+      height: 2px;
+      background: var(--white);
+      margin: 5px 0;
+      border-radius: 2px;
+      transition: all 0.3s;
+    }
+    .hamburger-btn.active span:nth-child(1) {
+      transform: rotate(45deg) translate(5px, 5px);
+    }
+    .hamburger-btn.active span:nth-child(2) {
+      opacity: 0;
+    }
+    .hamburger-btn.active span:nth-child(3) {
+      transform: rotate(-45deg) translate(5px, -5px);
+    }
+
+    /* ── BODY ── */
+    .body {
+      display: flex;
+      min-height: 600px;
+      position: relative;
+    }
+
+    /* ── SIDEBAR OVERLAY ── */
+    .sidebar-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.4);
+      z-index: 99;
+    }
+    .sidebar-overlay.active { display: block; }
+
+    /* ═══════════════════════════════════════════
+       ✨ SIDEBAR — ELEGANT HIERARCHY STYLE
+       ═══════════════════════════════════════════ */
+    .sidebar {
+      width: 260px;
+      flex-shrink: 0;
+      background: linear-gradient(180deg, #fafbfc 0%, #f3f5f8 100%);
+      border-right: 1px solid var(--border);
+      padding: 20px 0;
+      transition: transform 0.3s ease;
+      overflow-y: auto;
+      max-height: calc(100vh - 60px);
+    }
+
+    .sidebar::-webkit-scrollbar { width: 6px; }
+    .sidebar::-webkit-scrollbar-track { background: transparent; }
+    .sidebar::-webkit-scrollbar-thumb {
+      background: rgba(0,0,0,0.15);
+      border-radius: 3px;
+    }
+    .sidebar::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.25); }
+
+    .sidebar-logo {
+      padding: 0 20px 16px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 14px;
+    }
+    .sidebar-logo svg { width: 36px; height: 36px; }
+
+    .sidebar-section-label {
+      padding: 6px 20px 8px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-secondary);
+      opacity: 0.7;
+    }
+
+    .sidebar-nav {
+      list-style: none;
+    }
+
+    /* ── Year Row (Parent) ── */
+    .sidebar-year {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 16px 10px 20px;
+      margin: 2px 10px 2px 0;
+      font-family: 'Google Sans', sans-serif;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-primary);
+      cursor: pointer;
+      border-radius: 0 22px 22px 0;
+      transition: background 0.18s ease, color 0.18s ease;
+      user-select: none;
+      position: relative;
+    }
+
+    .sidebar-year:hover {
+      background: var(--hover-bg);
+      color: var(--blue);
+    }
+
+    .sidebar-year.active {
+      background: var(--active-bg);
+      color: var(--blue);
+    }
+
+    .sidebar-year .year-icon {
+      flex-shrink: 0;
+      color: inherit;
+    }
+
+    .sidebar-year .year-label {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .sidebar-year .photo-count {
+      font-family: 'Roboto', sans-serif;
+      font-size: 11px;
+      font-weight: 500;
+      background: rgba(0,0,0,0.06);
+      padding: 2px 8px;
+      border-radius: 10px;
+      color: var(--text-secondary);
+      transition: background 0.18s, color 0.18s;
+    }
+
+    .sidebar-year.active .photo-count {
+      background: var(--blue);
+      color: white;
+    }
+
+    .sidebar-year .chevron {
+      flex-shrink: 0;
+      color: var(--text-secondary);
+      transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), color 0.18s;
+    }
+
+    .sidebar-year:hover .chevron,
+    .sidebar-year.active .chevron {
+      color: var(--blue);
+    }
+
+    .sidebar-year.expanded .chevron {
+      transform: rotate(90deg);
+    }
+
+    /* ── Months Container (Collapsible) ── */
+    .sidebar-months {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+    }
+
+    .sidebar-months.expanded {
+      max-height: 800px;
+    }
+
+    .sidebar-months-inner {
+      position: relative;
+      padding: 4px 0 8px 0;
+    }
+
+    .sidebar-months-inner::before {
+      content: '';
+      position: absolute;
+      left: 32px;
+      top: 4px;
+      bottom: 12px;
+      width: 1px;
+      background: linear-gradient(180deg, var(--border) 0%, rgba(0,0,0,0.05) 100%);
+    }
+
+    /* ── Month Row (Child) ── */
+    .sidebar-month {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 7px 16px 7px 48px;
+      margin: 1px 10px 1px 0;
+      font-size: 13px;
+      color: var(--text-secondary);
+      cursor: pointer;
+      border-radius: 0 18px 18px 0;
+      transition: background 0.15s ease, color 0.15s ease;
+      position: relative;
+      user-select: none;
+    }
+
+    .sidebar-month::before {
+      content: '';
+      position: absolute;
+      left: 32px;
+      top: 50%;
+      width: 10px;
+      height: 1px;
+      background: var(--border);
+    }
+
+    .sidebar-month::after {
+      content: '';
+      position: absolute;
+      left: 29px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--border);
+      transition: background 0.15s, transform 0.15s;
+    }
+
+    .sidebar-month:hover {
+      background: var(--hover-bg);
+      color: var(--blue);
+    }
+
+    .sidebar-month:hover::after {
+      background: var(--blue);
+      transform: translateY(-50%) scale(1.3);
+    }
+
+    .sidebar-month.active {
+      background: var(--active-bg);
+      color: var(--blue);
+      font-weight: 500;
+    }
+
+    .sidebar-month.active::after {
+      background: var(--blue);
+      transform: translateY(-50%) scale(1.3);
+    }
+
+    .sidebar-month .month-icon {
+      flex-shrink: 0;
+      color: inherit;
+    }
+
+    .sidebar-month .month-label {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .sidebar-month .photo-count {
+      font-size: 10px;
+      font-weight: 500;
+      background: rgba(0,0,0,0.05);
+      padding: 1px 7px;
+      border-radius: 10px;
+      color: var(--text-secondary);
+      transition: background 0.15s, color 0.15s;
+    }
+
+    .sidebar-month.active .photo-count {
+      background: var(--blue);
+      color: white;
+    }
+
+    /* ── MAIN ── */
+    .main {
+      flex: 1;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    /* ── LOADING ── */
+    .loading {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 60px 20px;
+      color: var(--text-secondary);
+      gap: 16px;
+    }
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid var(--border);
+      border-top-color: var(--blue);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── EMPTY STATE ── */
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 60px 20px;
+      color: var(--text-secondary);
+      text-align: center;
+      gap: 12px;
+    }
+    .empty-state svg { width: 64px; height: 64px; color: var(--border); }
+    .empty-state h3 {
+      font-family: 'Google Sans', sans-serif;
+      color: var(--text-primary);
+      font-size: 18px;
+    }
+
+    /* ── GALLERY GRID ── */
+    .gallery {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+    }
+
+    .gallery-item {
+      position: relative;
+      border-radius: var(--radius);
+      overflow: hidden;
+      aspect-ratio: 1 / 1;
+      cursor: pointer;
+      background: #ddd;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .gallery-item:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 6px 20px rgba(0,0,0,0.16);
+    }
+
+    .gallery-item img {
+      width: 100%; height: 100%;
+      object-fit: cover;
+      display: block;
+      transition: opacity 0.3s;
+    }
+    .gallery-item img.loading { opacity: 0; }
+
+    .eye-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(30, 50, 90, 0.45);
+      display: flex;
+      align-items: flex-end;
+      justify-content: flex-end;
+      padding: 12px;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+    .gallery-item:hover .eye-overlay { opacity: 1; }
+
+    .eye-icon {
+      width: 36px; height: 36px;
+      background: rgba(255,255,255,0.18);
+      border: 2px solid rgba(255,255,255,0.7);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .eye-icon svg { color: white; }
+
+    /* ── PAGINATION ── */
+    .pagination {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 0 4px;
+      border-top: 1px solid var(--border);
+    }
+
+    .page-btns { display: flex; gap: 8px; }
+    .page-btns button {
+      width: 36px; height: 36px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--white);
+      font-size: 14px;
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .page-btns button:hover { background: var(--hover-bg); border-color: var(--blue); color: var(--blue); }
+    .page-btns button.active { background: var(--blue); color: white; border-color: var(--blue); }
+    .page-btns button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .page-info { font-size: 13px; color: var(--text-secondary); }
+
+    /* ── LIGHTBOX ── */
+    .lightbox {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.95);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+    .lightbox.active { display: flex; opacity: 1; }
+
+    .lightbox-content {
+      position: relative;
+      max-width: 90vw;
+      max-height: 90vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      animation: zoomIn 0.3s ease;
+    }
+
+    @keyframes zoomIn {
+      from { transform: scale(0.8); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+
+    .lightbox-img {
+      max-width: 100%;
+      max-height: 90vh;
+      border-radius: 8px;
+      box-shadow: 0 10px 50px rgba(0,0,0,0.5);
+      object-fit: contain;
+    }
+
+    .lightbox-close {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      width: 44px;
+      height: 44px;
+      background: rgba(255,255,255,0.15);
+      border: 2px solid rgba(255,255,255,0.3);
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s, transform 0.2s;
+      z-index: 1001;
+    }
+    .lightbox-close:hover { background: rgba(255,255,255,0.25); transform: rotate(90deg); }
+    .lightbox-close svg { color: white; }
+
+    .lightbox-nav {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 50px;
+      height: 50px;
+      background: rgba(255,255,255,0.15);
+      border: 2px solid rgba(255,255,255,0.3);
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s;
+      z-index: 1001;
+    }
+    .lightbox-nav:hover { background: rgba(255,255,255,0.25); }
+    .lightbox-nav svg { color: white; }
+    .lightbox-prev { left: 20px; }
+    .lightbox-next { right: 20px; }
+
+    .lightbox-counter {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      color: white;
+      font-size: 14px;
+      background: rgba(0,0,0,0.6);
+      padding: 8px 16px;
+      border-radius: 20px;
+      z-index: 1001;
+    }
+
+    .lightbox-title {
+      position: absolute;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      color: white;
+      font-size: 16px;
+      font-family: 'Google Sans', sans-serif;
+      background: rgba(0,0,0,0.6);
+      padding: 8px 20px;
+      border-radius: 20px;
+      z-index: 1001;
+      max-width: 60vw;
+      text-align: center;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* ── MOBILE RESPONSIVE ── */
+    @media (max-width: 768px) {
+      body { padding: 0; }
+      .app-window { border-radius: 0; max-width: 100%; }
+      .hamburger-btn { display: block; }
+      .sidebar {
+        position: fixed;
+        top: 0; left: 0;
+        height: 100vh;
+        max-height: 100vh;
+        z-index: 100;
+        transform: translateX(-100%);
+        box-shadow: 4px 0 20px rgba(0,0,0,0.2);
+      }
+      .sidebar.active { transform: translateX(0); }
+      .gallery { grid-template-columns: repeat(3, 1fr); gap: 10px; }
+      .header-title { font-size: 16px; }
+      .main { padding: 16px; }
+      .lightbox-nav { width: 40px; height: 40px; }
+      .lightbox-prev { left: 10px; }
+      .lightbox-next { right: 10px; }
+      .lightbox-close { top: 10px; right: 10px; width: 38px; height: 38px; }
+      .lightbox-title { font-size: 13px; max-width: 50vw; top: 10px; }
+    }
+
+    @media (max-width: 480px) {
+      .gallery { grid-template-columns: repeat(3, 1fr); gap: 8px; }
+      .gallery-item { border-radius: 8px; }
+      .eye-icon { width: 28px; height: 28px; }
+      .eye-icon svg { width: 14px; height: 14px; }
+      .lightbox-nav { width: 36px; height: 36px; }
+      .lightbox-prev { left: 8px; }
+      .lightbox-next { right: 8px; }
+      .lightbox-close { width: 34px; height: 34px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="app-window">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="header-left">
+      <button class="hamburger-btn" id="hamburgerBtn">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+      <div class="traffic-lights">
+        <span class="tl-red"></span>
+        <span class="tl-yellow"></span>
+        <span class="tl-green"></span>
+      </div>
+      <span class="header-title">Mas Baim Gallery</span>
+    </div>
+  </div>
+
+  <!-- SIDEBAR OVERLAY -->
+  <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+  <!-- BODY -->
+  <div class="body">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-section-label">Album</div>
+      <ul class="sidebar-nav" id="sidebarNav">
+        <!-- Hierarchical categories loaded dynamically from DB -->
+      </ul>
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <main class="main">
+      <div id="galleryContainer">
+        <div class="loading">
+          <div class="spinner"></div>
+          <span>Loading photos...</span>
+        </div>
+      </div>
+
+      <!-- PAGINATION -->
+      <div class="pagination" id="pagination" style="display:none;">
+        <div class="page-btns" id="pageBtns"></div>
+        <div class="page-info" id="pageInfo"></div>
+      </div>
+    </main>
+  </div>
+
+</div>
+
+<!-- LIGHTBOX MODAL -->
+<div class="lightbox" id="lightbox">
+  <button class="lightbox-close" id="lightboxClose">
+    <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+      <path d="M18 6L6 18M6 6l12 12"/>
+    </svg>
+  </button>
+  <div class="lightbox-title" id="lightboxTitle"></div>
+  <button class="lightbox-nav lightbox-prev" id="lightboxPrev">
+    <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+      <polyline points="15 18 9 12 15 6"/>
+    </svg>
+  </button>
+  <div class="lightbox-content">
+    <img src="" alt="" class="lightbox-img" id="lightboxImg"/>
+  </div>
+  <button class="lightbox-nav lightbox-next" id="lightboxNext">
+    <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+      <polyline points="9 18 15 12 9 6"/>
+    </svg>
+  </button>
+  <div class="lightbox-counter" id="lightboxCounter">1 / 9</div>
+</div>
+
+<script>
+  // ═══════════════════════════════════════════
+  // SUPABASE CONFIGURATION
+  // ═══════════════════════════════════════════
+  const SUPABASE_URL = 'https://aoemqjuvwnwfhpdeylan.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFvZW1xanV2d253ZmhwZGV5bGFuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA3NTQ0MTcsImV4cCI6MjA5NjMzMDQxN30.SqHeXWJhyf-LLf2jtfbhpYttjoapHnhfvCtubQ_fcuE';
+  const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  // ═══════════════════════════════════════════
+  // CONFIGURATION
+  // ═══════════════════════════════════════════
+  const PHOTOS_PER_PAGE = 9;
+
+  // Nama bulan (key = '01'-'12')
+  const MONTH_NAMES = {
+    '01': 'Januari', '02': 'Februari', '03': 'Maret',
+    '04': 'April',   '05': 'Mei',      '06': 'Juni',
+    '07': 'Juli',    '08': 'Agustus',  '09': 'September',
+    '10': 'Oktober', '11': 'November', '12': 'Desember'
+  };
+
+  // ═══════════════════════════════════════════
+  // STATE
+  // ═══════════════════════════════════════════
+  // Struktur categoryTree:
+  // {
+  //   "2026": { count: 15, months: { "06": 5, "05": 10 } },
+  //   "2025": { count: 8,  months: { "12": 8 } }
+  // }
+  let categoryTree = {};
+  let sortedYears = [];          // Tahun terurut desc
+  let currentCategory = null;    // "2026" atau "2026-06"
+  let currentPage = 1;
+  let totalPhotos = 0;
+  let allPhotos = [];
+  let currentIndex = 0;
+  let expandedYears = new Set(); // Tahun yang sedang di-expand
+
+  // ═══════════════════════════════════════════
+  // SIDEBAR NAVIGATION (DOM refs)
+  // ═══════════════════════════════════════════
+  const hamburgerBtn = document.getElementById('hamburgerBtn');
+  const sidebar = document.getElementById('sidebar');
+  const sidebarOverlay = document.getElementById('sidebarOverlay');
+  const sidebarNav = document.getElementById('sidebarNav');
+
+  function toggleSidebar() {
+    hamburgerBtn.classList.toggle('active');
+    sidebar.classList.toggle('active');
+    sidebarOverlay.classList.toggle('active');
+  }
+
+  function closeSidebar() {
+    hamburgerBtn.classList.remove('active');
+    sidebar.classList.remove('active');
+    sidebarOverlay.classList.remove('active');
+  }
+
+  hamburgerBtn.addEventListener('click', toggleSidebar);
+  sidebarOverlay.addEventListener('click', closeSidebar);
+
+  // ═══════════════════════════════════════════
+  // LOAD CATEGORIES FROM DATABASE
+  // ═══════════════════════════════════════════
+  async function loadCategoriesFromDB() {
+    // Ambil semua kategori dari tabel photos (hanya kolom category)
+    const { data, error } = await sb
+      .from('photos')
+      .select('category');
+
+    if (error) {
+      console.error('Error loading categories:', error);
+      return;
+    }
+
+    // Parse: bangun tree { year: { count, months: { monthKey: count } } }
+    categoryTree = {};
+
+    (data || []).forEach(row => {
+      const cat = row.category;
+      if (!cat) return;
+
+      if (cat.includes('-')) {
+        const [year, month] = cat.split('-');
+        if (!categoryTree[year]) categoryTree[year] = { count: 0, months: {} };
+        if (!categoryTree[year].months[month]) categoryTree[year].months[month] = 0;
+        categoryTree[year].months[month]++;
+        categoryTree[year].count++;
+      } else {
+        // Kategori tahun saja (tanpa bulan)
+        if (!categoryTree[cat]) categoryTree[cat] = { count: 0, months: {} };
+        categoryTree[cat].count++;
+      }
+    });
+
+    // Urutkan tahun DESC (terbaru di atas)
+    sortedYears = Object.keys(categoryTree).sort((a, b) => b.localeCompare(a));
+
+    // Set default kategori = tahun terbaru (jika ada)
+    if (sortedYears.length > 0 && !currentCategory) {
+      currentCategory = sortedYears[0];
+      expandedYears.add(sortedYears[0]);
+    }
+  }
+
+  // ═══════════════════════════════════════════
+  // BUILD SIDEBAR (Dynamic from categoryTree)
+  // ═══════════════════════════════════════════
+  function buildSidebar() {
+    if (sortedYears.length === 0) {
+      sidebarNav.innerHTML = `
+        <li style="padding:20px;color:var(--text-secondary);font-size:13px;text-align:center;">
+          Belum ada album foto.
+        </li>
+      `;
+      return;
+    }
+
+    sidebarNav.innerHTML = sortedYears.map(year => {
+      const yearData = categoryTree[year];
+      const isExpanded = expandedYears.has(year);
+      const isYearActive = currentCategory === year;
+      const yearCount = yearData.count;
+
+      // Bulan-bulan yang ada di tahun ini, urutkan DESC (Desember → Januari)
+      const monthKeys = Object.keys(yearData.months).sort((a, b) => b.localeCompare(a));
+
+      const monthsHtml = monthKeys.map(monthKey => {
+        const catKey = `${year}-${monthKey}`;
+        const isActive = currentCategory === catKey;
+        const count = yearData.months[monthKey];
+        const monthName = MONTH_NAMES[monthKey] || monthKey;
+
+        return `
+          <li class="sidebar-month ${isActive ? 'active' : ''}" data-category="${catKey}">
+            <svg class="month-icon" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+              <line x1="16" y1="2" x2="16" y2="6"/>
+              <line x1="8" y1="2" x2="8" y2="6"/>
+              <line x1="3" y1="10" x2="21" y2="10"/>
+            </svg>
+            <span class="month-label">${monthName}</span>
+            <span class="photo-count">${count}</span>
+          </li>
+        `;
+      }).join('');
+
+      return `
+        <li class="sidebar-nav-group">
+          <div class="sidebar-year ${isExpanded ? 'expanded' : ''} ${isYearActive ? 'active' : ''}" data-year="${year}">
+            <svg class="year-icon" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+              <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+            </svg>
+            <span class="year-label">${year}</span>
+            <span class="photo-count">${yearCount}</span>
+            <svg class="chevron" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
+              <polyline points="9 18 15 12 9 6"/>
+            </svg>
+          </div>
+          <ul class="sidebar-months ${isExpanded ? 'expanded' : ''}" id="months-${year}">
+            <div class="sidebar-months-inner">
+              ${monthsHtml}
+            </div>
+          </ul>
+        </li>
+      `;
+    }).join('');
+
+    // ── Event: Klik Tahun ──
+    sidebarNav.querySelectorAll('.sidebar-year').forEach(el => {
+      el.addEventListener('click', () => {
+        const year = el.dataset.year;
+
+        if (expandedYears.has(year)) {
+          expandedYears.delete(year);
+        } else {
+          expandedYears.add(year);
+        }
+
+        if (currentCategory !== year) {
+          currentCategory = year;
+          currentPage = 1;
+          loadPhotos();
+        }
+
+        buildSidebar();
+      });
+    });
+
+    // ── Event: Klik Bulan ──
+    sidebarNav.querySelectorAll('.sidebar-month').forEach(el => {
+      el.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const cat = el.dataset.category;
+        if (currentCategory === cat) return;
+
+        currentCategory = cat;
+        currentPage = 1;
+
+        const year = cat.split('-')[0];
+        expandedYears.add(year);
+
+        buildSidebar();
+        loadPhotos();
+
+        if (window.innerWidth <= 768) closeSidebar();
+      });
+    });
+  }
+
+  // ═══════════════════════════════════════════
+  // LOAD PHOTOS FROM SUPABASE
+  // ═══════════════════════════════════════════
+  async function loadPhotos() {
+    const container = document.getElementById('galleryContainer');
+    container.innerHTML = `
+      <div class="loading">
+        <div class="spinner"></div>
+        <span>Loading photos...</span>
+      </div>
+    `;
+    document.getElementById('pagination').style.display = 'none';
+
+    if (!currentCategory) {
+      container.innerHTML = `
+        <div class="empty-state">
+          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+            <path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+          </svg>
+          <h3>Galeri masih kosong</h3>
+          <p>Belum ada foto yang diupload.<br>Tambahkan foto melalui panel Admin.</p>
+        </div>
+      `;
+      return;
+    }
+
+    try {
+      const from = (currentPage - 1) * PHOTOS_PER_PAGE;
+      const to = from + PHOTOS_PER_PAGE - 1;
+
+      let query = sb
+        .from('photos')
+        .select('*', { count: 'exact' })
+        .order('sort_order', { ascending: true })
+        .order('created_at', { ascending: false })
+        .range(from, to);
+
+      if (currentCategory.includes('-')) {
+        // Kategori bulan spesifik → exact match
+        query = query.eq('category', currentCategory);
+      } else {
+        // Kategori tahun → match "2026" atau "2026-XX" apapun bulannya
+        query = query.like('category', `${currentCategory}%`);
+      }
+
+      const { data, error, count } = await query;
+
+      if (error) throw error;
+
+      totalPhotos = count || 0;
+      allPhotos = data || [];
+
+      if (allPhotos.length === 0) {
+        container.innerHTML = `
+          <div class="empty-state">
+            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+              <path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+            </svg>
+            <h3>Belum ada foto</h3>
+            <p>Belum ada foto di kategori ini.<br>Tambahkan foto melalui panel Admin.</p>
+          </div>
+        `;
+        return;
+      }
+
+      renderGallery(allPhotos);
+      renderPagination();
+
+    } catch (err) {
+      console.error('Error loading photos:', err);
+      container.innerHTML = `
+        <div class="empty-state">
+          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+            <path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"/>
+          </svg>
+          <h3>Gagal memuat foto</h3>
+          <p>${err.message}</p>
+        </div>
+      `;
+    }
+  }
+
+  function renderGallery(photos) {
+    const container = document.getElementById('galleryContainer');
+    
+    container.innerHTML = `
+      <div class="gallery">
+        ${photos.map((photo, index) => `
+          <div class="gallery-item" data-index="${index}">
+            <img 
+              src="${photo.thumbnail_url || photo.image_url}" 
+              alt="${photo.title}"
+              class="loading"
+              onload="this.classList.remove('loading')"
+            />
+            <div class="eye-overlay">
+              <div class="eye-icon">
+                <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="white" stroke-width="2">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                  <circle cx="12" cy="12" r="3"/>
+                </svg>
+              </div>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    `;
+
+    container.querySelectorAll('.gallery-item').forEach(item => {
+      item.addEventListener('click', () => {
+        const index = parseInt(item.dataset.index);
+        openLightbox(index);
+      });
+    });
+  }
+
+  function renderPagination() {
+    const totalPages = Math.ceil(totalPhotos / PHOTOS_PER_PAGE);
+    if (totalPages <= 1) {
+      document.getElementById('pagination').style.display = 'none';
+      return;
+    }
+
+    document.getElementById('pagination').style.display = 'flex';
+    
+    const pageBtns = document.getElementById('pageBtns');
+    let html = '';
+
+    html += `<button ${currentPage === 1 ? 'disabled' : ''} onclick="goToPage(${currentPage - 1})">‹</button>`;
+
+    for (let i = 1; i <= totalPages; i++) {
+      if (
+        i === 1 || i === totalPages || 
+        (i >= currentPage - 1 && i <= currentPage + 1)
+      ) {
+        html += `<button class="${i === currentPage ? 'active' : ''}" onclick="goToPage(${i})">${i}</button>`;
+      } else if (i === currentPage - 2 || i === currentPage + 2) {
+        html += `<button disabled>…</button>`;
+      }
+    }
+
+    html += `<button ${currentPage === totalPages ? 'disabled' : ''} onclick="goToPage(${currentPage + 1})">›</button>`;
+
+    pageBtns.innerHTML = html;
+    document.getElementById('pageInfo').textContent = 
+      `Halaman ${currentPage} dari ${totalPages} (${totalPhotos} foto)`;
+  }
+
+  function goToPage(page) {
+    currentPage = page;
+    loadPhotos();
+    document.querySelector('.main').scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  // ═══════════════════════════════════════════
+  // LIGHTBOX
+  // ═══════════════════════════════════════════
+  const lightbox = document.getElementById('lightbox');
+  const lightboxImg = document.getElementById('lightboxImg');
+  const lightboxTitle = document.getElementById('lightboxTitle');
+  const lightboxClose = document.getElementById('lightboxClose');
+  const lightboxPrev = document.getElementById('lightboxPrev');
+  const lightboxNext = document.getElementById('lightboxNext');
+  const lightboxCounter = document.getElementById('lightboxCounter');
+
+  function openLightbox(index) {
+    currentIndex = index;
+    updateLightboxImage();
+    lightbox.classList.add('active');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeLightbox() {
+    lightbox.classList.remove('active');
+    document.body.style.overflow = '';
+  }
+
+  function updateLightboxImage() {
+    const photo = allPhotos[currentIndex];
+    if (!photo) return;
+    
+    lightboxImg.src = photo.image_url;
+    lightboxImg.alt = photo.title;
+    lightboxTitle.textContent = photo.title;
+    lightboxCounter.textContent = `${currentIndex + 1} / ${allPhotos.length}`;
+  }
+
+  function nextImage() {
+    currentIndex = (currentIndex + 1) % allPhotos.length;
+    updateLightboxImage();
+  }
+
+  function prevImage() {
+    currentIndex = (currentIndex - 1 + allPhotos.length) % allPhotos.length;
+    updateLightboxImage();
+  }
+
+  lightboxClose.addEventListener('click', closeLightbox);
+  lightboxNext.addEventListener('click', nextImage);
+  lightboxPrev.addEventListener('click', prevImage);
+
+  lightbox.addEventListener('click', (e) => {
+    if (e.target === lightbox) closeLightbox();
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (!lightbox.classList.contains('active')) return;
+    if (e.key === 'Escape') closeLightbox();
+    else if (e.key === 'ArrowRight') nextImage();
+    else if (e.key === 'ArrowLeft') prevImage();
+  });
+
+  // ═══════════════════════════════════════════
+  // INITIALIZE
+  // ═══════════════════════════════════════════
+  async function init() {
+    await loadCategoriesFromDB();
+    buildSidebar();
+    loadPhotos();
+  }
+
+  init();
+</script>
+</body>
+</html>
