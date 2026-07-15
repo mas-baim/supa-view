@@ -3,10 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Mas Baim Gallery</title>
+  <title>Mas Baim Gallery - Supa View</title>
   <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&family=Roboto:wght@300;400;500&display=swap" rel="stylesheet"/>
   
-  <!-- Supabase JS Client -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   
   <style>
@@ -141,9 +140,7 @@
     }
     .sidebar-overlay.active { display: block; }
 
-    /* ═══════════════════════════════════════════
-       ✨ SIDEBAR — ELEGANT HIERARCHY STYLE
-       ═══════════════════════════════════════════ */
+    /* ── SIDEBAR ── */
     .sidebar {
       width: 260px;
       flex-shrink: 0;
@@ -162,13 +159,6 @@
       border-radius: 3px;
     }
     .sidebar::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.25); }
-
-    .sidebar-logo {
-      padding: 0 20px 16px;
-      border-bottom: 1px solid var(--border);
-      margin-bottom: 14px;
-    }
-    .sidebar-logo svg { width: 36px; height: 36px; }
 
     .sidebar-section-label {
       padding: 6px 20px 8px;
@@ -642,7 +632,6 @@
 
 <div class="app-window">
 
-  <!-- HEADER -->
   <div class="header">
     <div class="header-left">
       <button class="hamburger-btn" id="hamburgerBtn">
@@ -659,21 +648,16 @@
     </div>
   </div>
 
-  <!-- SIDEBAR OVERLAY -->
   <div class="sidebar-overlay" id="sidebarOverlay"></div>
 
-  <!-- BODY -->
   <div class="body">
 
-    <!-- SIDEBAR -->
     <aside class="sidebar" id="sidebar">
       <div class="sidebar-section-label">Album</div>
       <ul class="sidebar-nav" id="sidebarNav">
-        <!-- Hierarchical categories loaded dynamically from DB -->
-      </ul>
+        </ul>
     </aside>
 
-    <!-- MAIN CONTENT -->
     <main class="main">
       <div id="galleryContainer">
         <div class="loading">
@@ -682,7 +666,6 @@
         </div>
       </div>
 
-      <!-- PAGINATION -->
       <div class="pagination" id="pagination" style="display:none;">
         <div class="page-btns" id="pageBtns"></div>
         <div class="page-info" id="pageInfo"></div>
@@ -692,7 +675,6 @@
 
 </div>
 
-<!-- LIGHTBOX MODAL -->
 <div class="lightbox" id="lightbox">
   <button class="lightbox-close" id="lightboxClose">
     <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -729,7 +711,6 @@
   // ═══════════════════════════════════════════
   const PHOTOS_PER_PAGE = 9;
 
-  // Nama bulan (key = '01'-'12')
   const MONTH_NAMES = {
     '01': 'Januari', '02': 'Februari', '03': 'Maret',
     '04': 'April',   '05': 'Mei',      '06': 'Juni',
@@ -740,19 +721,14 @@
   // ═══════════════════════════════════════════
   // STATE
   // ═══════════════════════════════════════════
-  // Struktur categoryTree:
-  // {
-  //   "2026": { count: 15, months: { "06": 5, "05": 10 } },
-  //   "2025": { count: 8,  months: { "12": 8 } }
-  // }
   let categoryTree = {};
-  let sortedYears = [];          // Tahun terurut desc
-  let currentCategory = null;    // "2026" atau "2026-06"
+  let sortedYears = [];       
+  let currentCategory = null; // Menampung format "YYYY-MM" atau "YYYY"
   let currentPage = 1;
   let totalPhotos = 0;
   let allPhotos = [];
   let currentIndex = 0;
-  let expandedYears = new Set(); // Tahun yang sedang di-expand
+  let expandedYears = new Set(); 
 
   // ═══════════════════════════════════════════
   // SIDEBAR NAVIGATION (DOM refs)
@@ -781,7 +757,6 @@
   // LOAD CATEGORIES FROM DATABASE
   // ═══════════════════════════════════════════
   async function loadCategoriesFromDB() {
-    // Ambil semua kategori dari tabel photos (hanya kolom category)
     const { data, error } = await sb
       .from('photos')
       .select('category');
@@ -791,7 +766,6 @@
       return;
     }
 
-    // Parse: bangun tree { year: { count, months: { monthKey: count } } }
     categoryTree = {};
 
     (data || []).forEach(row => {
@@ -805,24 +779,33 @@
         categoryTree[year].months[month]++;
         categoryTree[year].count++;
       } else {
-        // Kategori tahun saja (tanpa bulan)
         if (!categoryTree[cat]) categoryTree[cat] = { count: 0, months: {} };
         categoryTree[cat].count++;
       }
     });
 
-    // Urutkan tahun DESC (terbaru di atas)
+    // Urutkan tahun DESC
     sortedYears = Object.keys(categoryTree).sort((a, b) => b.localeCompare(a));
 
-    // Set default kategori = tahun terbaru (jika ada)
+    // FITUR UTAMA: Deteksi otomatis bulan terakhir/terbaru yang memiliki data
     if (sortedYears.length > 0 && !currentCategory) {
-      currentCategory = sortedYears[0];
-      expandedYears.add(sortedYears[0]);
+      const latestYear = sortedYears[0];
+      const monthKeys = Object.keys(categoryTree[latestYear].months).sort((a, b) => b.localeCompare(a));
+      
+      if (monthKeys.length > 0) {
+        // Jika tahun terbaru memiliki kategori bulan, pilih bulan paling baru
+        currentCategory = `${latestYear}-${monthKeys[0]}`;
+      } else {
+        // Fallback jika hanya ada data tahun saja
+        currentCategory = latestYear;
+      }
+      // Expand folder tahun terbaru agar user langsung melihat item aktifnya
+      expandedYears.add(latestYear);
     }
   }
 
   // ═══════════════════════════════════════════
-  // BUILD SIDEBAR (Dynamic from categoryTree)
+  // BUILD SIDEBAR
   // ═══════════════════════════════════════════
   function buildSidebar() {
     if (sortedYears.length === 0) {
@@ -840,7 +823,6 @@
       const isYearActive = currentCategory === year;
       const yearCount = yearData.count;
 
-      // Bulan-bulan yang ada di tahun ini, urutkan DESC (Desember → Januari)
       const monthKeys = Object.keys(yearData.months).sort((a, b) => b.localeCompare(a));
 
       const monthsHtml = monthKeys.map(monthKey => {
@@ -884,7 +866,7 @@
       `;
     }).join('');
 
-    // ── Event: Klik Tahun ──
+    // Klik Tahun
     sidebarNav.querySelectorAll('.sidebar-year').forEach(el => {
       el.addEventListener('click', () => {
         const year = el.dataset.year;
@@ -905,7 +887,7 @@
       });
     });
 
-    // ── Event: Klik Bulan ──
+    // Klik Bulan
     sidebarNav.querySelectorAll('.sidebar-month').forEach(el => {
       el.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -927,7 +909,7 @@
   }
 
   // ═══════════════════════════════════════════
-  // LOAD PHOTOS FROM SUPABASE
+  // LOAD PHOTOS FROM SUPABASE (Sort by Newest)
   // ═══════════════════════════════════════════
   async function loadPhotos() {
     const container = document.getElementById('galleryContainer');
@@ -946,7 +928,7 @@
             <path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
           </svg>
           <h3>Galeri masih kosong</h3>
-          <p>Belum ada foto yang diupload.<br>Tambahkan foto melalui panel Admin.</p>
+          <p>Belum ada foto yang diupload.</p>
         </div>
       `;
       return;
@@ -959,15 +941,14 @@
       let query = sb
         .from('photos')
         .select('*', { count: 'exact' })
-        .order('sort_order', { ascending: true })
+        // FITUR UTAMA: Urutkan berdasarkan data buatan terbaru di atas (created_at DESC)
         .order('created_at', { ascending: false })
+        .order('sort_order', { ascending: true })
         .range(from, to);
 
       if (currentCategory.includes('-')) {
-        // Kategori bulan spesifik → exact match
         query = query.eq('category', currentCategory);
       } else {
-        // Kategori tahun → match "2026" atau "2026-XX" apapun bulannya
         query = query.like('category', `${currentCategory}%`);
       }
 
@@ -983,9 +964,9 @@
           <div class="empty-state">
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
               <path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-            </svg>
+          </svg>
             <h3>Belum ada foto</h3>
-            <p>Belum ada foto di kategori ini.<br>Tambahkan foto melalui panel Admin.</p>
+            <p>Belum ada foto di kategori ini.</p>
           </div>
         `;
         return;
@@ -1057,10 +1038,7 @@
     html += `<button ${currentPage === 1 ? 'disabled' : ''} onclick="goToPage(${currentPage - 1})">‹</button>`;
 
     for (let i = 1; i <= totalPages; i++) {
-      if (
-        i === 1 || i === totalPages || 
-        (i >= currentPage - 1 && i <= currentPage + 1)
-      ) {
+      if (i === 1 || i === totalPages || (i >= currentPage - 1 && i <= currentPage + 1)) {
         html += `<button class="${i === currentPage ? 'active' : ''}" onclick="goToPage(${i})">${i}</button>`;
       } else if (i === currentPage - 2 || i === currentPage + 2) {
         html += `<button disabled>…</button>`;
@@ -1070,8 +1048,7 @@
     html += `<button ${currentPage === totalPages ? 'disabled' : ''} onclick="goToPage(${currentPage + 1})">›</button>`;
 
     pageBtns.innerHTML = html;
-    document.getElementById('pageInfo').textContent = 
-      `Halaman ${currentPage} dari ${totalPages} (${totalPhotos} foto)`;
+    document.getElementById('pageInfo').textContent = `Halaman ${currentPage} dari ${totalPages} (${totalPhotos} foto)`;
   }
 
   function goToPage(page) {
